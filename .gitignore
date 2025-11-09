@@ -1,1 +1,6 @@
+# mis cosas para tomar notas y demas
 local_dev/
+
+# archivos del sistema
+.DS_Store
+Thumbs.db   
