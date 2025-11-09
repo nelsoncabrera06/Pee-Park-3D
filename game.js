@@ -156,7 +156,7 @@ function createDog_original_cuadrado() {
 function createDog() {
     const loader = new THREE.GLTFLoader();
 
-    loader.load('little_cartoon_dog/scene.gltf', function(gltf) {
+    loader.load('dogs-3D-models/little_cartoon_dog/scene.gltf', function(gltf) {
         dog = gltf.scene;
 
         // Enable shadows for all meshes in the model
