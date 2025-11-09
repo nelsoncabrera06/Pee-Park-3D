@@ -2,9 +2,17 @@
 
 // Game state
 let scene, camera, renderer, dog, trees = [], score = 0, timeLeft = 30;
-let gameActive = true;
+let gameActive = false; // Start as false until user clicks play
 const keys = {};
 const treePositions = new Set();
+let selectedDog = null; // Store selected dog name
+let gameStarted = false; // Track if game has been initialized
+let cameraRotationOffset = 0; // Camera rotation offset for specific dog models
+
+// Debug helpers
+let debugAxes = null;
+let debugHeightMarkers = [];
+let debugMode = false; // Debug mode is off by default
 
 // Initialize Three.js scene
 function init() {
@@ -15,7 +23,6 @@ function init() {
     // Create camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 8, 12);
-    //camera.position.set(20, 80, -12); // probando otras posiciones
     camera.lookAt(0, 0, 0);
 
     // Create renderer
@@ -65,8 +72,18 @@ function init() {
     // Create trees
     createTrees();
 
+    // Create debug axes and height markers
+    createDebugHelpers();
+
     // Event listeners
-    window.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keydown', (e) => {
+        keys[e.key.toLowerCase()] = true;
+
+        // Toggle debug mode with Shift+M
+        if (e.shiftKey && e.key.toLowerCase() === 'm') {
+            toggleDebugMode();
+        }
+    });
     window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
     window.addEventListener('resize', onWindowResize);
 
@@ -155,8 +172,9 @@ function createDog_original_cuadrado() {
 // Create dog character (new 3D model version)
 function createDog() {
     const loader = new THREE.GLTFLoader();
+    const dogPath = `dogs-3D-models/${selectedDog}/scene.gltf`;
 
-    loader.load('dogs-3D-models/little_cartoon_dog/scene.gltf', function(gltf) {
+    loader.load(dogPath, function(gltf) {
         dog = gltf.scene;
 
         // Enable shadows for all meshes in the model
@@ -168,11 +186,51 @@ function createDog() {
         });
 
         // Position and scale adjustments
-        dog.position.set(0, 0.8, 0); // Y=0.8 to lift the dog above ground
-        dog.scale.set(0.8, 0.8, 0.8); // Adjust scale if needed
+        // Different heights for different dogs
+        let heightY = 0.8; // Default height
+        if (selectedDog === 'dog_big') {
+            heightY = 1.15; // Height for dog_big
+        } else if (selectedDog === 'dog_puppy') {
+            heightY = 0.044; // 0.544 - 0.5 = 0.044
+        } else if (selectedDog === 'dog_white') {
+            heightY = 0.8; // Adjust as needed
+        } else if (selectedDog === 'little_cartoon_dog') {
+            heightY = 0.8; // Adjust as needed
+        }
 
-        // No rotation needed - model naturally faces +X, camera will be positioned in +X
-        dog.rotation.y = 0;
+        dog.position.set(0, heightY, 0);
+
+        // Different scales for different dogs
+        let scale = 0.8; // Default scale
+        if (selectedDog === 'dog_white') {
+            scale = 0.96; // 20% bigger (0.8 * 1.2 = 0.96)
+        } else if (selectedDog === 'dog_big') {
+            scale = 0.68; // 15% smaller (0.8 * 0.85 = 0.68)
+        }
+        dog.scale.set(scale, scale, scale);
+
+        // Rotate dog to face forward (aligned with camera)
+        // Default rotation: 0 means dog faces +Z (forward)
+        // Each model may have different initial orientations in their GLTF files
+        let rotation = 0; // Default for most dogs
+
+        // Model-specific rotations
+        if (selectedDog === 'dog_big') {
+            // dog_big model has different initial orientation in GLTF
+            rotation = Math.PI / 2; // 90 degrees - dog_big faces +Z with this rotation
+            cameraRotationOffset = -Math.PI / 2; // Camera needs -90 degree offset to compensate
+        } else if (selectedDog === 'dog_puppy') {
+            rotation = 0; // Puppy faces +Z --> perfect
+            cameraRotationOffset = 0; // No offset needed
+        } else if (selectedDog === 'dog_white') {
+            rotation = 0; // White dog faces +Z --> perfect
+            cameraRotationOffset = 0; // No offset needed
+        } else if (selectedDog === 'little_cartoon_dog') {
+            rotation = 0; // Cartoon dog faces +Z --> perfect
+            cameraRotationOffset = 0; // No offset needed
+        }
+
+        dog.rotation.y = rotation;
 
         scene.add(dog);
 
@@ -191,6 +249,156 @@ function createDog() {
         animate();
         startTimer();
     });
+}
+
+// Create debug helpers (axes and height markers)
+function createDebugHelpers() {
+    // Create axes helper at origin (will move with dog)
+    debugAxes = new THREE.Group();
+
+    // X axis (Red) - horizontal
+    const xGeometry = new THREE.CylinderGeometry(0.05, 0.05, 5, 8);
+    const xMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const xAxis = new THREE.Mesh(xGeometry, xMaterial);
+    xAxis.rotation.z = Math.PI / 2;
+    xAxis.position.x = 2.5;
+    debugAxes.add(xAxis);
+
+    // Add arrow tip for X
+    const xConeGeometry = new THREE.ConeGeometry(0.2, 0.5, 8);
+    const xCone = new THREE.Mesh(xConeGeometry, xMaterial);
+    xCone.rotation.z = -Math.PI / 2;
+    xCone.position.x = 5;
+    debugAxes.add(xCone);
+
+    // Add "X" label
+    createTextSprite('X', 0xff0000, 5.5, 0.3, 0);
+
+    // Z axis (Blue) - horizontal perpendicular
+    const zGeometry = new THREE.CylinderGeometry(0.05, 0.05, 5, 8);
+    const zMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    const zAxis = new THREE.Mesh(zGeometry, zMaterial);
+    zAxis.rotation.x = Math.PI / 2;
+    zAxis.position.z = 2.5;
+    debugAxes.add(zAxis);
+
+    // Add arrow tip for Z
+    const zConeGeometry = new THREE.ConeGeometry(0.2, 0.5, 8);
+    const zCone = new THREE.Mesh(zConeGeometry, zMaterial);
+    zCone.rotation.x = Math.PI / 2; // Fixed rotation to point towards +Z
+    zCone.position.z = 5;
+    debugAxes.add(zCone);
+
+    // Add "Z" label
+    createTextSprite('Z', 0x0000ff, 0, 0.3, 5.5);
+
+    // Y axis (Green) - vertical
+    const yGeometry = new THREE.CylinderGeometry(0.05, 0.05, 5, 8);
+    const yMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const yAxis = new THREE.Mesh(yGeometry, yMaterial);
+    yAxis.position.y = 2.5;
+    debugAxes.add(yAxis);
+
+    // Add arrow tip for Y
+    const yConeGeometry = new THREE.ConeGeometry(0.2, 0.5, 8);
+    const yCone = new THREE.Mesh(yConeGeometry, yMaterial);
+    yCone.position.y = 5;
+    debugAxes.add(yCone);
+
+    // Add "Y" label
+    createTextSprite('Y', 0x00ff00, 0, 5.5, 0);
+
+    debugAxes.position.set(0, 0, 0);
+    debugAxes.visible = debugMode; // Start hidden
+    scene.add(debugAxes);
+
+    // Create height markers (every 1 unit on Y axis)
+    for (let i = 0; i <= 5; i++) {
+        const height = i * 1.0;
+        const markerGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const markerMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffff00,
+            transparent: true,
+            opacity: 0.7
+        });
+        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+        marker.position.set(0, height, 0);
+        debugHeightMarkers.push(marker);
+        debugAxes.add(marker);
+
+        // Add number labels for heights 1 and 2
+        if (i === 1 || i === 2) {
+            createTextSprite(i.toString(), 0xffff00, 0.3, height, 0);
+        }
+    }
+}
+
+// Toggle debug mode visibility
+function toggleDebugMode() {
+    debugMode = !debugMode;
+    if (debugAxes) {
+        debugAxes.visible = debugMode;
+    }
+
+    // Toggle debug info panel
+    const debugInfo = document.getElementById('debugInfo');
+    if (debugInfo) {
+        debugInfo.style.display = debugMode ? 'block' : 'none';
+    }
+
+    console.log(`Debug mode: ${debugMode ? 'ON' : 'OFF'}`);
+}
+
+// Update debug info panel
+function updateDebugInfo() {
+    if (!debugMode || !dog) return;
+
+    const debugInfo = document.getElementById('debugInfo');
+    if (!debugInfo) return;
+
+    // Get dog name in proper format
+    const dogNames = {
+        'dog_big': 'Big Dog',
+        'dog_puppy': 'Puppy',
+        'dog_white': 'White Dog',
+        'little_cartoon_dog': 'Cartoon Dog'
+    };
+
+    const dogName = dogNames[selectedDog] || selectedDog;
+
+    debugInfo.textContent = `DEBUG MODE
+Dog: ${dogName}
+Position:
+  X: ${dog.position.x.toFixed(2)}
+  Y: ${dog.position.y.toFixed(2)}
+  Z: ${dog.position.z.toFixed(2)}`;
+}
+
+// Helper function to create text sprites for labels
+function createTextSprite(text, color, x, y, z) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 128;
+    canvas.height = 128;
+
+    // Draw text
+    context.font = 'Bold 80px Arial';
+    context.fillStyle = '#' + color.toString(16).padStart(6, '0');
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(text, 64, 64);
+
+    // Create texture from canvas
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+
+    // Create sprite
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(0.5, 0.5, 1);
+
+    debugAxes.add(sprite);
 }
 
 // Create trees
@@ -263,15 +471,18 @@ function updateDog() {
     const rotationSpeed = 0.05;
     let moved = false;
 
-    // Movement (adjusted for dog facing +X axis)
+    // Calculate effective rotation once (applies camera offset for models like dog_big)
+    const effectiveRotation = dog.rotation.y + cameraRotationOffset;
+
+    // Movement
     if (keys['w'] || keys['arrowup']) {
-        dog.position.x += Math.sin(dog.rotation.y) * moveSpeed;
-        dog.position.z += Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.x += Math.sin(effectiveRotation) * moveSpeed;
+        dog.position.z += Math.cos(effectiveRotation) * moveSpeed;
         moved = true;
     }
     if (keys['s'] || keys['arrowdown']) {
-        dog.position.x -= Math.sin(dog.rotation.y) * moveSpeed;
-        dog.position.z -= Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.x -= Math.sin(effectiveRotation) * moveSpeed;
+        dog.position.z -= Math.cos(effectiveRotation) * moveSpeed;
         moved = true;
     }
     if (keys['a'] || keys['arrowleft']) {
@@ -302,11 +513,21 @@ function updateDog() {
         }
     }
 
-    // Update camera to follow dog (positioned behind dog in +X direction)
-    camera.position.x = dog.position.x - Math.sin(dog.rotation.y) * 12;
-    camera.position.z = dog.position.z - Math.cos(dog.rotation.y) * 12;
+    // Update camera to follow dog (positioned behind dog)
+    camera.position.x = dog.position.x - Math.sin(effectiveRotation) * 12;
+    camera.position.z = dog.position.z - Math.cos(effectiveRotation) * 12;
     camera.position.y = 8;
     camera.lookAt(dog.position);
+
+    // Update debug axes to follow dog (X and Z centered on dog, Y stays at ground level)
+    if (debugAxes) {
+        debugAxes.position.x = dog.position.x;
+        debugAxes.position.z = dog.position.z;
+        debugAxes.position.y = 0; // Always at ground level
+    }
+
+    // Update debug info panel
+    updateDebugInfo();
 }
 
 // Check if dog is near a tree
@@ -422,5 +643,52 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-// Start game
-init();
+// Dog selection menu logic
+document.addEventListener('DOMContentLoaded', function() {
+    const dogOptions = document.querySelectorAll('.dog-option');
+    const startButton = document.getElementById('startButton');
+    const dogMenu = document.getElementById('dogSelectionMenu');
+
+    // Handle dog selection
+    dogOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remove selected class from all options
+            dogOptions.forEach(opt => opt.classList.remove('selected'));
+            // Add selected class to clicked option
+            this.classList.add('selected');
+            // Store selected dog
+            selectedDog = this.getAttribute('data-dog');
+            // Enable start button
+            startButton.disabled = false;
+            startButton.textContent = '¡Jugar!';
+        });
+    });
+
+    // Handle start button click
+    startButton.addEventListener('click', startGame);
+
+    // Handle Enter key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && selectedDog && !gameStarted) {
+            startGame();
+        }
+    });
+});
+
+// Start the game
+function startGame() {
+    if (!selectedDog || gameStarted) return;
+
+    gameStarted = true;
+    gameActive = true;
+
+    // Hide menu
+    document.getElementById('dogSelectionMenu').style.display = 'none';
+
+    // Show game UI
+    document.getElementById('ui').style.display = 'block';
+    document.getElementById('instructions').style.display = 'block';
+
+    // Initialize and start the game
+    init();
+}

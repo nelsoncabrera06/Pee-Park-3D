@@ -98,20 +98,133 @@
             display: none;
             z-index: 15;
         }
+        #debugInfo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            display: none;
+            z-index: 20;
+            white-space: pre;
+        }
+        #dogSelectionMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #3a9d23 0%, #2d7a1a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        #dogSelectionMenu h1 {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 40px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+        .dog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            margin-bottom: 30px;
+        }
+        .dog-option {
+            background: white;
+            border: 4px solid transparent;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .dog-option:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .dog-option.selected {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        .dog-option h3 {
+            margin: 10px 0 0 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .dog-icon {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin: 0 auto;
+        }
+        #startButton {
+            font-size: 28px;
+            padding: 20px 50px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #startButton:hover {
+            background: #45a049;
+        }
+        #startButton:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
-    <div id="ui">
+    <div id="dogSelectionMenu">
+        <h1>🐕 Pee Park 3D 🐕</h1>
+        <div class="dog-grid">
+            <div class="dog-option" data-dog="dog_big">
+                <img src="dogs-3D-models/dog_big/dog.png" alt="Dog" class="dog-icon">
+                <h3>Big Dog</h3>
+            </div>
+            <div class="dog-option" data-dog="dog_puppy">
+                <img src="dogs-3D-models/dog_puppy/puppy.png" alt="Puppy" class="dog-icon">
+                <h3>Puppy</h3>
+            </div>
+            <div class="dog-option" data-dog="dog_white">
+                <img src="dogs-3D-models/dog_white/white.png" alt="White Dog" class="dog-icon">
+                <h3>White Dog</h3>
+            </div>
+            <div class="dog-option" data-dog="little_cartoon_dog">
+                <img src="dogs-3D-models/little_cartoon_dog/cartoon.png" alt="Cartoon Dog" class="dog-icon">
+                <h3>Cartoon Dog</h3>
+            </div>
+        </div>
+        <button id="startButton" disabled>Selecciona un perro</button>
+    </div>
+
+    <div id="ui" style="display: none;">
         <div id="timer">Tiempo: 30s</div>
         <div id="score">Puntos: 0</div>
     </div>
 
-    <div id="instructions">
+    <div id="instructions" style="display: none;">
         Usa WASD o las flechas para mover al perro<br>
         Presiona ESPACIO cerca de un árbol para hacer pis y ganar puntos!
     </div>
 
-    <div id="peeIndicator">¡Presiona ESPACIO!</div>
+    <div id="peeIndicator" style="display: none;">¡Presiona ESPACIO!</div>
+
+    <div id="debugInfo" style="display: none;"></div>
 
     <div id="gameOver">
         <h1>¡Fin del Juego!</h1>
