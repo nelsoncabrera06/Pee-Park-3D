@@ -8,6 +8,12 @@ const treePositions = new Set();
 let selectedDog = null; // Store selected dog name
 let gameStarted = false; // Track if game has been initialized
 let cameraRotationOffset = 0; // Camera rotation offset for specific dog models
+let cameraAngle = 0; // Orbital camera angle controlled by right stick
+let cameraDistance = 7; // Distance from camera to dog (controlled by right stick Y)
+
+// Gamepad state
+let gamepad = null;
+let gamepadIndex = null;
 
 // Debug helpers
 let debugAxes = null;
@@ -86,6 +92,20 @@ function init() {
     });
     window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
     window.addEventListener('resize', onWindowResize);
+
+    // Gamepad event listeners
+    window.addEventListener('gamepadconnected', (e) => {
+        console.log('Gamepad connected:', e.gamepad.id);
+        gamepad = e.gamepad;
+        gamepadIndex = e.gamepad.index;
+    });
+    window.addEventListener('gamepaddisconnected', (e) => {
+        console.log('Gamepad disconnected');
+        if (e.gamepad.index === gamepadIndex) {
+            gamepad = null;
+            gamepadIndex = null;
+        }
+    });
 
     // Note: animate() and startTimer() are now called after the dog model loads in createDog()
 }
@@ -351,7 +371,7 @@ function toggleDebugMode() {
 
 // Update debug info panel
 function updateDebugInfo() {
-    if (!debugMode || !dog) return;
+    if (!debugMode || !dog || !camera) return;
 
     const debugInfo = document.getElementById('debugInfo');
     if (!debugInfo) return;
@@ -368,10 +388,15 @@ function updateDebugInfo() {
 
     debugInfo.textContent = `DEBUG MODE
 Dog: ${dogName}
-Position:
+Dog Position:
   X: ${dog.position.x.toFixed(2)}
   Y: ${dog.position.y.toFixed(2)}
-  Z: ${dog.position.z.toFixed(2)}`;
+  Z: ${dog.position.z.toFixed(2)}
+
+Camera Position:
+  X: ${camera.position.x.toFixed(2)}
+  Y: ${camera.position.y.toFixed(2)}
+  Z: ${camera.position.z.toFixed(2)}`;
 }
 
 // Helper function to create text sprites for labels
@@ -463,6 +488,34 @@ function createTree() {
     return treeGroup;
 }
 
+// Poll gamepad state
+function pollGamepad() {
+    if (gamepadIndex !== null) {
+        // Need to call getGamepads() every frame to get updated state
+        const gamepads = navigator.getGamepads();
+        gamepad = gamepads[gamepadIndex];
+    }
+    return gamepad;
+}
+
+// Get gamepad input with deadzone
+function getGamepadAxis(axisIndex, deadzone = 0.15) {
+    const gp = pollGamepad();
+    if (!gp || !gp.axes[axisIndex]) return 0;
+
+    const value = gp.axes[axisIndex];
+    // Apply deadzone to avoid drift
+    return Math.abs(value) > deadzone ? value : 0;
+}
+
+// Check if gamepad button is pressed
+function isGamepadButtonPressed(buttonIndex) {
+    const gp = pollGamepad();
+    if (!gp || !gp.buttons[buttonIndex]) return false;
+
+    return gp.buttons[buttonIndex].pressed;
+}
+
 // Update dog movement
 function updateDog() {
     if (!gameActive) return;
@@ -474,22 +527,54 @@ function updateDog() {
     // Calculate effective rotation once (applies camera offset for models like dog_big)
     const effectiveRotation = dog.rotation.y + cameraRotationOffset;
 
-    // Movement
-    if (keys['w'] || keys['arrowup']) {
-        dog.position.x += Math.sin(effectiveRotation) * moveSpeed;
-        dog.position.z += Math.cos(effectiveRotation) * moveSpeed;
+    // Read gamepad inputs
+    const leftStickX = getGamepadAxis(0); // Left stick horizontal (dog rotation)
+    const leftStickY = getGamepadAxis(1); // Left stick vertical (forward/back)
+    const rightStickX = getGamepadAxis(2); // Right stick horizontal (camera orbit)
+    const rightStickY = getGamepadAxis(3); // Right stick vertical (camera zoom)
+
+    // Movement - forward/backward (keyboard W/S or left stick Y)
+    if (keys['w'] || keys['arrowup'] || leftStickY < 0) {
+        const speed = leftStickY < 0 ? moveSpeed * Math.abs(leftStickY) : moveSpeed;
+        dog.position.x += Math.sin(effectiveRotation) * speed;
+        dog.position.z += Math.cos(effectiveRotation) * speed;
         moved = true;
     }
-    if (keys['s'] || keys['arrowdown']) {
-        dog.position.x -= Math.sin(effectiveRotation) * moveSpeed;
-        dog.position.z -= Math.cos(effectiveRotation) * moveSpeed;
+    if (keys['s'] || keys['arrowdown'] || leftStickY > 0) {
+        const speed = leftStickY > 0 ? moveSpeed * Math.abs(leftStickY) : moveSpeed;
+        dog.position.x -= Math.sin(effectiveRotation) * speed;
+        dog.position.z -= Math.cos(effectiveRotation) * speed;
         moved = true;
     }
-    if (keys['a'] || keys['arrowleft']) {
-        dog.rotation.y += rotationSpeed;
+
+    // Dog rotation - left/right (keyboard A/D or left stick X)
+    if (keys['a'] || keys['arrowleft'] || leftStickX < 0) {
+        const speed = leftStickX < 0 ? rotationSpeed * Math.abs(leftStickX) : rotationSpeed;
+        dog.rotation.y += speed;
     }
-    if (keys['d'] || keys['arrowright']) {
-        dog.rotation.y -= rotationSpeed;
+    if (keys['d'] || keys['arrowright'] || leftStickX > 0) {
+        const speed = leftStickX > 0 ? rotationSpeed * Math.abs(leftStickX) : rotationSpeed;
+        dog.rotation.y -= speed;
+    }
+
+    // Camera orbit - controlled by right stick X
+    const cameraRotationSpeed = 0.03;
+    if (rightStickX !== 0) {
+        cameraAngle -= rightStickX * cameraRotationSpeed;
+    }
+
+    // Camera zoom - controlled by right stick Y (up = closer, down = farther)
+    const cameraZoomSpeed = 0.2;
+    if (rightStickY !== 0) {
+        cameraDistance += rightStickY * cameraZoomSpeed;
+        // Clamp distance between 5 and 25 units
+        cameraDistance = Math.max(5, Math.min(25, cameraDistance));
+    }
+
+    // Reset camera - R3 button (right stick click)
+    if (isGamepadButtonPressed(11)) { // Button 11 is R3 on most gamepads
+        cameraAngle = 0;
+        cameraDistance = 7;
     }
 
     // Boundary limits
@@ -499,8 +584,8 @@ function updateDog() {
     // Check if near tree
     checkNearTree();
 
-    // Pee action
-    if (keys[' ']) {
+    // Pee action (keyboard Space or gamepad button A/Cross)
+    if (keys[' '] || isGamepadButtonPressed(0)) {
         const nearTree = getNearestTree();
         if (nearTree && !nearTree.userData.peed) {
             const dist = Math.sqrt(
@@ -513,10 +598,17 @@ function updateDog() {
         }
     }
 
-    // Update camera to follow dog (positioned behind dog)
-    camera.position.x = dog.position.x - Math.sin(effectiveRotation) * 12;
-    camera.position.z = dog.position.z - Math.cos(effectiveRotation) * 12;
-    camera.position.y = 8;
+    // Update camera to follow dog (positioned behind dog with orbital angle and zoom)
+    const totalCameraRotation = effectiveRotation + cameraAngle;
+    camera.position.x = dog.position.x - Math.sin(totalCameraRotation) * cameraDistance;
+    camera.position.z = dog.position.z - Math.cos(totalCameraRotation) * cameraDistance;
+
+    // Camera height varies with distance (closer = lower, farther = higher)
+    // At distance 7 (default), height is 5
+    // At distance 5 (closest), height is ~3.57
+    // At distance 25 (farthest), height is ~17.86
+    camera.position.y = (cameraDistance / 7) * 5;
+
     camera.lookAt(dog.position);
 
     // Update debug axes to follow dog (X and Z centered on dog, Y stays at ground level)
