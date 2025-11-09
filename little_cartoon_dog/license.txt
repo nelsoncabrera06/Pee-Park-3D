@@ -1,0 +1,8 @@
+Model Information:
+* title:	little cartoon dog
+* source:	https://sketchfab.com/3d-models/little-cartoon-dog-e0c1413956dc40769ba3bf96dc476bc3
+* author:	nadiro (https://sketchfab.com/haliminadir48)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

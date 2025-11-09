@@ -1,3 +1,5 @@
+// GLTFLoader is loaded from CDN in index.html
+
 // Game state
 let scene, camera, renderer, dog, trees = [], score = 0, timeLeft = 30;
 let gameActive = true;
@@ -68,13 +70,11 @@ function init() {
     window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
     window.addEventListener('resize', onWindowResize);
 
-    // Start game loop
-    animate();
-    startTimer();
+    // Note: animate() and startTimer() are now called after the dog model loads in createDog()
 }
 
-// Create dog character
-function createDog() {
+// Create dog character (original version - backup)
+function createDog_original_cuadrado() {
     const dogGroup = new THREE.Group();
 
     // Body
@@ -147,9 +147,50 @@ function createDog() {
     });
 
     dogGroup.position.set(0, 0, 0);
-    //dogGroup.rotation.y = Math.PI / 2; 
+    //dogGroup.rotation.y = Math.PI / 2;
     dog = dogGroup;
     scene.add(dog);
+}
+
+// Create dog character (new 3D model version)
+function createDog() {
+    const loader = new THREE.GLTFLoader();
+
+    loader.load('little_cartoon_dog/scene.gltf', function(gltf) {
+        dog = gltf.scene;
+
+        // Enable shadows for all meshes in the model
+        dog.traverse(function(node) {
+            if (node.isMesh) {
+                node.castShadow = true;
+                node.receiveShadow = true;
+            }
+        });
+
+        // Position and scale adjustments
+        dog.position.set(0, 0.8, 0); // Y=0.8 to lift the dog above ground
+        dog.scale.set(0.8, 0.8, 0.8); // Adjust scale if needed
+
+        // No rotation needed - model naturally faces +X, camera will be positioned in +X
+        dog.rotation.y = 0;
+
+        scene.add(dog);
+
+        // Start the game loop and timer after the dog is loaded
+        animate();
+        startTimer();
+    },
+    function(xhr) {
+        // Progress callback (optional)
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function(error) {
+        console.error('Error loading dog model:', error);
+        // Fallback to original dog if loading fails
+        createDog_original_cuadrado();
+        animate();
+        startTimer();
+    });
 }
 
 // Create trees
@@ -222,15 +263,15 @@ function updateDog() {
     const rotationSpeed = 0.05;
     let moved = false;
 
-    // Movement
+    // Movement (adjusted for dog facing +X axis)
     if (keys['w'] || keys['arrowup']) {
-        dog.position.x += Math.cos(dog.rotation.y) * moveSpeed;
-        dog.position.z -= Math.sin(dog.rotation.y) * moveSpeed;
+        dog.position.x += Math.sin(dog.rotation.y) * moveSpeed;
+        dog.position.z += Math.cos(dog.rotation.y) * moveSpeed;
         moved = true;
     }
     if (keys['s'] || keys['arrowdown']) {
-        dog.position.x -= Math.cos(dog.rotation.y) * moveSpeed;
-        dog.position.z += Math.sin(dog.rotation.y) * moveSpeed;
+        dog.position.x -= Math.sin(dog.rotation.y) * moveSpeed;
+        dog.position.z -= Math.cos(dog.rotation.y) * moveSpeed;
         moved = true;
     }
     if (keys['a'] || keys['arrowleft']) {
@@ -261,9 +302,9 @@ function updateDog() {
         }
     }
 
-    // Update camera to follow dog
-    camera.position.x = dog.position.x - Math.cos(dog.rotation.y) * 12;
-    camera.position.z = dog.position.z + Math.sin(dog.rotation.y) * 12;
+    // Update camera to follow dog (positioned behind dog in +X direction)
+    camera.position.x = dog.position.x - Math.sin(dog.rotation.y) * 12;
+    camera.position.z = dog.position.z - Math.cos(dog.rotation.y) * 12;
     camera.position.y = 8;
     camera.lookAt(dog.position);
 }
