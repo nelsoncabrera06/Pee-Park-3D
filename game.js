@@ -13,6 +13,7 @@ function init() {
     // Create camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 8, 12);
+    //camera.position.set(20, 80, -12); // probando otras posiciones
     camera.lookAt(0, 0, 0);
 
     // Create renderer
@@ -146,6 +147,7 @@ function createDog() {
     });
 
     dogGroup.position.set(0, 0, 0);
+    //dogGroup.rotation.y = Math.PI / 2; 
     dog = dogGroup;
     scene.add(dog);
 }
@@ -222,13 +224,13 @@ function updateDog() {
 
     // Movement
     if (keys['w'] || keys['arrowup']) {
-        dog.position.x += Math.sin(dog.rotation.y) * moveSpeed;
-        dog.position.z += Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.x += Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.z -= Math.sin(dog.rotation.y) * moveSpeed;
         moved = true;
     }
     if (keys['s'] || keys['arrowdown']) {
-        dog.position.x -= Math.sin(dog.rotation.y) * moveSpeed;
-        dog.position.z -= Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.x -= Math.cos(dog.rotation.y) * moveSpeed;
+        dog.position.z += Math.sin(dog.rotation.y) * moveSpeed;
         moved = true;
     }
     if (keys['a'] || keys['arrowleft']) {
@@ -260,8 +262,8 @@ function updateDog() {
     }
 
     // Update camera to follow dog
-    camera.position.x = dog.position.x - Math.sin(dog.rotation.y) * 12;
-    camera.position.z = dog.position.z - Math.cos(dog.rotation.y) * 12;
+    camera.position.x = dog.position.x - Math.cos(dog.rotation.y) * 12;
+    camera.position.z = dog.position.z + Math.sin(dog.rotation.y) * 12;
     camera.position.y = 8;
     camera.lookAt(dog.position);
 }
