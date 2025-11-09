@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perro Pis - El Juego</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #98D8C8);
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        #timer {
+            font-size: 32px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        #score {
+            font-size: 28px;
+            margin-top: 10px;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-align: center;
+            z-index: 10;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 20;
+        }
+        #gameOver h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        #gameOver p {
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+        #gameOver button {
+            font-size: 24px;
+            padding: 15px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        #gameOver button:hover {
+            background: #45a049;
+        }
+        #peeIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 0, 0.8);
+            color: black;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            display: none;
+            z-index: 15;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="timer">Tiempo: 30s</div>
+        <div id="score">Puntos: 0</div>
+    </div>
+
+    <div id="instructions">
+        Usa WASD o las flechas para mover al perro<br>
+        Presiona ESPACIO cerca de un árbol para hacer pis y ganar puntos!
+    </div>
+
+    <div id="peeIndicator">¡Presiona ESPACIO!</div>
+
+    <div id="gameOver">
+        <h1>¡Fin del Juego!</h1>
+        <p id="finalScore">Puntos: 0</p>
+        <button onclick="location.reload()">Jugar de Nuevo</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
